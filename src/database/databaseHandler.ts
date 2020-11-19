@@ -11,14 +11,28 @@ class DatabaseHandler {
     {
         try {
             await createConnection({
+                name: "peet",
                 type: "mysql",
                 host: config.dbHost,
                 port: config.dbPort,
                 username: config.dbUsername,
                 password: config.dbPassword,
-                database: config.dbName,
+                database: config.dbPeetName,
                 logging: false,
-                entities: ["dist/database/entities/*.js"],
+                entities: ["dist/database/entities/peet/*.js"],
+                entityPrefix: undefined
+            })
+            
+            await createConnection({
+                name: "squirrel",
+                type: "mysql",
+                host: config.dbHost,
+                port: config.dbPort,
+                username: config.dbUsername,
+                password: config.dbPassword,
+                database: config.dbSquirrelName,
+                logging: false,
+                entities: ["dist/database/entities/squirrel/*.js"],
                 entityPrefix: undefined
             })
 

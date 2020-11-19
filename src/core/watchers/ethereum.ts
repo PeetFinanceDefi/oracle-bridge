@@ -1,6 +1,7 @@
-import { SwapRequestEntity } from "../../database/entities/SwapRequest";
+import { SwapRequestEntity } from "../../database/entities/peet/SwapRequest";
 import { config } from "../../config"
 import { factory } from "../../logger"
+import Web3 from "web3"
 
 const log = factory.getLogger("oracle");
 

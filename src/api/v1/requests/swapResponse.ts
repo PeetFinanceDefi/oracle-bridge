@@ -5,4 +5,5 @@ export interface SwapResponse {
     fromAddr: string,
     dstAddr: string,
     expireAt: Date
+    oracleAddr: string
 }

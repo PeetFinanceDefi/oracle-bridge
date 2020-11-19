@@ -1,14 +1,16 @@
 import { SwapRequest } from "../api/v1/requests/swapRequest";
 import { SwapChain } from "../enums/swapChain";
 import { factory } from "./../logger"
-import { SwapRequestEntity } from "../database/entities/SwapRequest"
-import { getRepository, In } from "typeorm"
+import { SwapRequestEntity } from "../database/entities/peet/SwapRequest"
 import Web3 from "web3"
 import moment from 'moment'
 import { SwapResponse } from "../api/v1/requests/swapResponse";
 import { SwapCancelRequest } from "../api/v1/requests/swapCancelRequest";
 import MiscHelper from "../helpers/misc";
 import { ethereumWatcher } from "./watchers/ethereum"
+import { neoWatcher } from "./watchers/neo"
+import { getConnection } from "typeorm";
+import { config } from "../config";
 
 const fs = require('fs') ;
 const log = factory.getLogger("oracle");
@@ -30,7 +32,7 @@ export class CoreHandler {
             now:  moment(new Date()).toDate(),
         }
 
-        const activeRequests = await getRepository(SwapRequestEntity)
+        const activeRequests = await getConnection("peet").getRepository(SwapRequestEntity)
         .createQueryBuilder()
         .andWhere('expire_at > :now')
         .andWhere('ended = 0')
@@ -38,6 +40,11 @@ export class CoreHandler {
         .getMany()
 
         return activeRequests
+    }
+
+    public async swapPTE(request: SwapRequestEntity, amount: number, tx_id: string): Promise<boolean> {
+        log.info(`Sending ${amount} PTE to ${request.dstAddr} (${request.toChain}) (from tx: ${tx_id})`)
+        return true
     }
 
     private async initHandler()
@@ -49,47 +56,15 @@ export class CoreHandler {
                 const requests: SwapRequestEntity[] = await this.reloadWaitingRequests()
                 // watch chains
                 await ethereumWatcher.doJob(requests.filter(x => x.fromChain === "eth"))
+                await neoWatcher.doJob(requests.filter(x => x.fromChain === "neo"))
             }
             catch (error)
             {
                 console.error(error)
             }
-            await MiscHelper.SleepSeconds(1)
+            await MiscHelper.SleepSeconds(30)
         }
     }
-
-    // constructor()
-    // {
-    //     this.initEthContract()
-    // }
-
-    // async initEthContract() {
-    //     this.web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"))
-    //     const json = JSON.parse(fs.readFileSync("./abi/swap.json"));
-    //     this.ethContract = new this.web3.eth.Contract(json.abi, this.ethContractAddress);
-    // }
-
-    // async initEthSwapRequest(swapRequest: SwapRequest): Promise<boolean>
-    // {
-    //     try {
-    //         const hashAmount = (await this.ethContract.methods.getHashAmount(swapRequest.from_addr,
-    //             swapRequest.to_chain, swapRequest.hash).call()) as number
-    //         const hashDestination = await this.ethContract.methods.getHashDestination(swapRequest.from_addr,
-    //             swapRequest.to_chain, swapRequest.hash).call()
-
-    //         if ((hashDestination === undefined || hashDestination.length == 0) || hashAmount <= 0) {
-    //             log.info(`Invalid swap request received from ${swapRequest.from_addr}`)
-    //             return false
-    //         }
-
-    //         log.info(`Init swap ${SwapChain.ETH} -> ${swapRequest.to_chain}: ${hashAmount} PET to address ${hashDestination}`)
-    //         //TODO: save waiting state in sqlite database
-    //         return true
-    //     } catch (e) { 
-    //         console.error(e)
-    //         return false
-    //     }
-    // }
 
     async cancelSwapRequest(swapCancelRequest: SwapCancelRequest): Promise<boolean | undefined>
     {
@@ -98,7 +73,7 @@ export class CoreHandler {
             now:  moment(new Date()).toDate(),
             pin_code: swapCancelRequest.pin_code
         }
-        const activeRequest = await getRepository(SwapRequestEntity)
+        const activeRequest = await getConnection("peet").getRepository(SwapRequestEntity)
             .createQueryBuilder()
             .where('from_addr = :from_addr')
             .andWhere('expire_at > :now')
@@ -110,11 +85,18 @@ export class CoreHandler {
             return undefined
         }
     
-        await getRepository(SwapRequestEntity).update({idswapRequest: activeRequest.idswapRequest}, {
+        await getConnection("peet").getRepository(SwapRequestEntity).update({idswapRequest: activeRequest.idswapRequest}, {
             ended: 1,
             expireAt: moment(new Date()).toDate()
         })
         return true
+    }
+
+    oracleAddr(chain: string) {
+        switch (chain) {
+            case "neo":
+                return config.NeoAddr
+        }
     }
 
     async initSwapRequest(swapRequest: SwapRequest): Promise<SwapResponse>
@@ -125,7 +107,7 @@ export class CoreHandler {
                 from_addr: swapRequest.from_addr,
                 now:  moment(new Date()).toDate()
             }
-            const waitingRequest = await getRepository(SwapRequestEntity)
+            const waitingRequest = await getConnection("peet").getRepository(SwapRequestEntity)
                 .createQueryBuilder()
                 .where('from_addr = :from_addr')
                 .andWhere('expire_at > :now')
@@ -140,13 +122,14 @@ export class CoreHandler {
                     fromChain: waitingRequest.fromChain,
                     toChain: waitingRequest.toChain,
                     fromAddr: waitingRequest.fromAddr,
-                    dstAddr: waitingRequest.dstAddr
+                    dstAddr: waitingRequest.dstAddr,
+                    oracleAddr: this.oracleAddr(waitingRequest.fromChain)
                 }
             }
         
             const expirationDate = moment(new Date()).add(1, 'hour')
             const pinCode: string = Math.random().toString().substr(2, 4)
-            getRepository(SwapRequestEntity).insert({
+            getConnection("peet").getRepository(SwapRequestEntity).insert({
                 fromChain: swapRequest.from_chain,
                 toChain: swapRequest.to_chain,
                 fromAddr: swapRequest.from_addr,
@@ -163,6 +146,7 @@ export class CoreHandler {
                 toChain: swapRequest.to_chain,
                 fromAddr: swapRequest.from_addr,
                 dstAddr: swapRequest.to_addr,
+                oracleAddr: this.oracleAddr(swapRequest.from_chain)
             }
         } catch (e) {
             console.error(e)
