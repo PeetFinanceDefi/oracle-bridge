@@ -66,7 +66,7 @@ export class NeoWatcher
                 // Create transaction object
                 let rawTransaction = new tx.InvocationTransaction({
                     script: script,
-                    fees: 0.1,
+                    // fees: 0.1,
                 });
                 // nonce
                 const hexRemark = Neon.u.str2hexstring(this.between(0, 999999999).toString());

@@ -36,6 +36,9 @@ export class Config {
 	@ENV('ETH_CHAIN', true)
 	public EthereumChain: string
 
+	@ENV('ETH_MIN_CONFS', true)
+	public EthereumMinConfirmations: number
+
 	@ENV('UNISWAP_PEET_TOKEN', true)
 	public UniswapPeetToken: string
 

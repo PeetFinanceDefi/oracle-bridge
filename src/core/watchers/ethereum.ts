@@ -36,6 +36,24 @@ export class EthereumWatcher
         }, 60000 * 1)
     }
 
+    async waitConfirmationsLoop(event: any)
+    {
+        setTimeout(async () => {
+            const blockTx = event.blockNumber
+            const currentBlock = await this.web3.eth.getBlockNumber()
+
+            const diffBlocks = currentBlock - blockTx
+            if (diffBlocks > config.EthereumMinConfirmations) {
+                log.info(`(Eth Chain) Tx ${ event.transactionHash}: confirmed within ${diffBlocks} blocks...`)
+                return this.handleRequest(event)
+            } else {
+                log.info(`(Eth Chain) Tx ${ event.transactionHash}: ${diffBlocks}/${config.EthereumMinConfirmations} confirmation(s)`)
+            }
+
+            this.waitConfirmationsLoop(event)
+        }, 10000);
+    }
+
     async watchTransfers()
     {
         const abi = JSON.parse(fs.readFileSync('./abi/pte_eth.json', 'utf-8'));
@@ -45,7 +63,8 @@ export class EthereumWatcher
             if (event.returnValues.to === config.EthereumAddr) {
                 const value = event.returnValues.value / (10 ** 18)
                 log.info(`(ETH) Received ${value} PTE from: ${event.returnValues.from}`)
-                this.handleRequest(event)
+                this.waitConfirmationsLoop(event)
+                
             }
         })
     }
