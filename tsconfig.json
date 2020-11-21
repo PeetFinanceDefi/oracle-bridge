@@ -11,7 +11,8 @@
 		"strictNullChecks": false,
 		"experimentalDecorators": true,
 		"types": ["reflect-metadata"],
- 		"sourceMap": true		
+		"sourceMap": true,
+		"skipLibCheck": true
 	},
 		"exclude": ["node_modules/", "__tests__/", "dist", "ecosystem.config.js"]
 }

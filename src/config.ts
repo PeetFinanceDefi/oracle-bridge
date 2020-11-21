@@ -21,13 +21,26 @@ export class Config {
 	@ENV('DB_SQUIRREL_NAME', true)
     public dbSquirrelName: string
 	
-	@ENV('ETH_WATCH_ADDR', true)
-	public EthereumWatchAddress: string
+	@ENV('ETH_ASSET_ID', true)
+	public EthereumAsset: string
 
-	@ENV('ETHEREUM_NODE', true)
+	@ENV('ETH_PRIVATE_KEY', true)
+	public EthereumPrivateKey: string
+
+	@ENV('ETH_NODE', true)
 	public EthereumNode: string
-	@ENV('ETHEREUM_NODE_WS', true)
-	public EthereumNodeWebSocket: string
+	
+	@ENV('ETH_ADDR', true)
+	public EthereumAddr: string
+
+	@ENV('ETH_CHAIN', true)
+	public EthereumChain: string
+
+	@ENV('UNISWAP_PEET_TOKEN', true)
+	public UniswapPeetToken: string
+
+	@ENV('UNISWAP_ETH_TOKEN', true)
+	public UniswapWrappedEthToken: string
 
 	@ENV('NEO_NODE', true)
 	public NeoNode: string 

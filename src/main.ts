@@ -12,6 +12,7 @@ const log = factory.getLogger("oracle");
 
         log.info(`Starting the Oracle Engine...`)
 
+        
         // init db
         await databaseHandler.initConnection()
         

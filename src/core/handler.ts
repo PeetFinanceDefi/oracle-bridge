@@ -16,11 +16,6 @@ const fs = require('fs') ;
 const log = factory.getLogger("oracle");
 
 export class CoreHandler {
-
-    private ethContract: any;
-    private ethContractAddress: string = "0x45B7DC520714fFF64a00C62818FE0148c33A3265"
-    private web3: Web3 = undefined
-
     constructor()
     {
         this.initHandler()
@@ -42,8 +37,40 @@ export class CoreHandler {
         return activeRequests
     }
 
-    public async swapPTE(request: SwapRequestEntity, amount: number, tx_id: string): Promise<boolean> {
-        log.info(`Sending ${amount} PTE to ${request.dstAddr} (${request.toChain}) (from tx: ${tx_id})`)
+    public async swapPTE(request: SwapRequestEntity, receivedAmount: number, tx_id: string): Promise<boolean> {
+        const existing = await getConnection("peet").getRepository(SwapRequestEntity)
+            .createQueryBuilder()
+            .where('tx_id = :txid')
+            .andWhere('sent_amount > 0')
+            .setParameters({txid: tx_id})
+            .getOne()
+
+        if (existing !== undefined) {
+            return
+        }
+
+        log.info(`Preparing to send ~ ${receivedAmount} PTE to ${request.dstAddr} (${request.toChain}) (from tx: ${tx_id})`)
+        let sentAmount: number = 0
+        switch (request.toChain) {
+            case "eth":
+                sentAmount = Number(await ethereumWatcher.sendPTE(request, receivedAmount))
+                break;
+            
+            case "neo":
+                sentAmount = Number(await neoWatcher.sendPTE(request, receivedAmount))
+                break;
+        }
+        if (sentAmount > 0) {
+            await getConnection("peet").getRepository(SwapRequestEntity).update({idswapRequest: request.idswapRequest}, {
+                ended: 1,
+                txId: tx_id,
+                receivedAmount: receivedAmount.toFixed(8),
+                sentAmount: sentAmount.toFixed(8)
+            })
+
+            log.info(`Swap request for ${request.fromChain} tx_id ${tx_id} sucessfully ended. ${sentAmount} PTE sent on ${request.dstAddr} (${request.toChain})`)
+        }
+        
         return true
     }
 
@@ -55,7 +82,7 @@ export class CoreHandler {
             {
                 const requests: SwapRequestEntity[] = await this.reloadWaitingRequests()
                 // watch chains
-                await ethereumWatcher.doJob(requests.filter(x => x.fromChain === "eth"))
+                // await ethereumWatcher.doJob(requests.filter(x => x.fromChain === "eth"))
                 await neoWatcher.doJob(requests.filter(x => x.fromChain === "neo"))
             }
             catch (error)
@@ -92,10 +119,36 @@ export class CoreHandler {
         return true
     }
 
+    async getStateRequest(swapCancelRequest: SwapCancelRequest): Promise<any | undefined>
+    {
+        const parameters = { 
+            from_addr: swapCancelRequest.from_addr,
+            now:  moment(new Date()).toDate(),
+        }
+        const request = await getConnection("peet").getRepository(SwapRequestEntity)
+            .createQueryBuilder()
+            .where('from_addr = :from_addr')
+            .andWhere('expire_at > :now')
+            .orderBy("idswap_request", "DESC")
+            .setParameters(parameters)
+            .getOne()
+        if (request === undefined) {
+            return undefined
+        }
+    
+        return {
+            tx: request.txId,
+            amount: Number(request.receivedAmount),
+            ended: request.ended
+        }
+    }
+
     oracleAddr(chain: string) {
         switch (chain) {
             case "neo":
                 return config.NeoAddr
+            case "eth":
+                return config.EthereumAddr
         }
     }
 
@@ -123,7 +176,9 @@ export class CoreHandler {
                     toChain: waitingRequest.toChain,
                     fromAddr: waitingRequest.fromAddr,
                     dstAddr: waitingRequest.dstAddr,
-                    oracleAddr: this.oracleAddr(waitingRequest.fromChain)
+                    oracleAddr: this.oracleAddr(waitingRequest.fromChain),
+                    tx: waitingRequest.txId,
+                    amount: Number(waitingRequest.receivedAmount)
                 }
             }
         
@@ -146,7 +201,9 @@ export class CoreHandler {
                 toChain: swapRequest.to_chain,
                 fromAddr: swapRequest.from_addr,
                 dstAddr: swapRequest.to_addr,
-                oracleAddr: this.oracleAddr(swapRequest.from_chain)
+                oracleAddr: this.oracleAddr(swapRequest.from_chain),
+                tx: undefined,
+                amount: 0
             }
         } catch (e) {
             console.error(e)

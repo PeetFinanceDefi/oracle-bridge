@@ -41,6 +41,9 @@ export class SwapRequestEntity {
   @Column("tinyint", { name: "ended", nullable: true, default: () => "'0'" })
   ended: number | null;
 
+  @Column("varchar", { name: "tx_id", nullable: true, length: 255 })
+  txId: string | null;
+
   @Column("timestamp", { name: "created_at", nullable: true })
   createdAt: Date | null;
 

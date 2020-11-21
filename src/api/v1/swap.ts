@@ -38,4 +38,19 @@ router.post('/cancel', async (request: any, result: any) => {
     }
 })
 
+router.post('/state', async (request: any, result: any) => {
+    try {
+        const swapCancelRequest: SwapCancelRequest = request.body as SwapCancelRequest
+        var stateResult: any | undefined = await Core.getStateRequest(swapCancelRequest)
+        if (stateResult === undefined) {
+            return result.send({result: false, message: "Couldn't get state."});
+        }
+
+        return result.send({result: true, message: "State successfully updated", data: stateResult})
+    } catch(e) {
+        console.error(e)
+        return result.send({result: false, message: "Please try again later."});
+    }
+})
+
 module.exports = router;

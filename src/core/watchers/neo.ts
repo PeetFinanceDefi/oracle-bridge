@@ -37,6 +37,73 @@ export class NeoWatcher
         this.wallet.addAccount(this.account);
     }
 
+    private between(min, max) {  
+		return Math.floor(
+			Math.random() * (max - min) + min
+		)
+	}
+
+    public async sendPTE(request: SwapRequestEntity, amount: number): Promise<number>
+    {
+        return new Promise((resolve, _) => {
+            try {
+                var sentAmount: number = amount
+                //from
+                const p1 = sc.ContractParam.byteArray(
+                    config.NeoAddr,
+                    "address"
+                );
+                //dst
+                const p2 = sc.ContractParam.byteArray(
+                    request.dstAddr,
+                    "address"
+                )
+                //amount
+                const p3 =  Neon.create.contractParam("Integer", sentAmount * (10 ** 8));
+
+                const fnc = { scriptHash: config.NeoAssetId, operation: 'transfer', args: [p1, p2, p3] }
+                const script = Neon.create.script(fnc)
+                // Create transaction object
+                let rawTransaction = new tx.InvocationTransaction({
+                    script: script,
+                    fees: 0.1,
+                });
+                // nonce
+                const hexRemark = Neon.u.str2hexstring(this.between(0, 999999999).toString());
+                rawTransaction.addAttribute(tx.TxAttrUsage.Remark, hexRemark);
+
+                // Build input objects and output objects.
+                rawTransaction.addAttribute(
+                    tx.TxAttrUsage.Script,
+                    u.reverseHex(wallet.getScriptHashFromAddress(this.account.address))
+                );
+
+                const signature = wallet.sign(
+                    rawTransaction.serialize(false),
+                    this.account.privateKey
+                );
+                rawTransaction.addWitness(
+                    tx.Witness.fromSignature(signature, this.account.publicKey)
+                );
+
+                const client = new rpc.RPCClient(`http://${config.NeoNode}`);
+                client
+                .sendRawTransaction(rawTransaction)
+                .then(res => {
+                    resolve((res == true) ? sentAmount : -1)
+                })
+                .catch(err => {
+                    console.log(err);
+                    resolve(-1)
+                });
+                
+            } catch (error) {
+                console.error(error)
+                resolve(-1)
+            }
+        })
+    }
+
     public async waitBlocks(tx: Nep5Tx, request: SwapRequestEntity): Promise<boolean> {
         log.info(`(Neo Chain) Received ${tx.value} PTE from ${tx.from}, dst: ${request.dstAddr} (to ${request.toChain.toUpperCase()}), waiting for confirmations..`)
 
@@ -92,6 +159,10 @@ export class NeoWatcher
         
                     // received funds!
                     if (tx !== undefined) {
+                        await getConnection("peet").getRepository(SwapRequestEntity).update({idswapRequest: x.idswapRequest}, {
+                            txId: tx.txid, 
+                            receivedAmount: tx.value
+                        })
                         const confirmed = await this.waitBlocks(tx, x)
                         if (confirmed) {
                             await Core.swapPTE(x, Number(tx.value), tx.txid)
