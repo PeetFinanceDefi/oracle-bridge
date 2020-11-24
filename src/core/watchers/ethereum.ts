@@ -113,7 +113,6 @@ export class EthereumWatcher
         const pair = await Fetcher.fetchPairData(PTE, ETH);
         const route = new Route([pair], ETH)
         const result = Number(parseFloat(route.midPrice.toSignificant(6)) * amount);
-
         return result;
     }
 
@@ -131,9 +130,12 @@ export class EthereumWatcher
             const gasPrice = (estimatedGasPrice * baseGasPriceEth);
             amount = (amount - await this.convertEthPriceToPtePrice(gasPrice)).toFixed(8);
 
+            console.log(estimatedGasPrice)
             let rawTransaction = {
+                "chainId": 1,
                 "from": config.EthereumAddr,
                 "nonce": "0x" + count.toString(16),
+                "gas": this.web3.utils.toHex(estimatedGasPrice + 21000),
                 "gasPrice": this.web3.utils.toHex(this.web3.utils.toWei(baseGasPriceEth.toString(), 'ether')),
                 "gasLimit": this.web3.utils.toHex((await this.web3.eth.getBlock("latest")).gasLimit),
                 "to": contractAddress,
