@@ -128,7 +128,7 @@ export class NeoWatcher
             {
                 console.error(error)
             }
-            await MiscHelper.SleepSeconds(60)
+            await MiscHelper.SleepSeconds(30)
         }
 
         return false

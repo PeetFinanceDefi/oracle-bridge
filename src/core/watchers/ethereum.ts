@@ -102,7 +102,7 @@ export class EthereumWatcher
     }
 
     async getGasPriceAsEth() {
-        const gasPrice = (await this.web3.eth.getGasPrice() * 3).toString()
+        const gasPrice = await this.web3.eth.getGasPrice()
         return this.web3.utils.fromWei(gasPrice, 'ether')
     }
 
