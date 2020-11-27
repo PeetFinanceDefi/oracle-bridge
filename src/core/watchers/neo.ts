@@ -86,7 +86,7 @@ export class NeoWatcher
                     tx.Witness.fromSignature(signature, this.account.publicKey)
                 );
 
-                const client = new rpc.RPCClient(`http://${config.NeoNode}`);
+                const client = new rpc.RPCClient(`${config.NeoNode}`);
                 client
                 .sendRawTransaction(rawTransaction)
                 .then(res => {
