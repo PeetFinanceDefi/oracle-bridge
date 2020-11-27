@@ -2,6 +2,8 @@ const router = require('express').Router();
 
 import { factory } from "./../../logger"
 import { etherScan } from "../../worker/etherScanInfos";
+import { getConnection } from "typeorm";
+import { SwapRequestEntity } from "../../database/entities/peet/SwapRequest";
 const log = factory.getLogger("oracle");
 const request = require('request');
 
@@ -11,7 +13,10 @@ let Parser = require('rss-parser');
 let parser = new Parser();
 router.get('/token', async (_: any, result: any) => {
     try {
-        return result.send({result: true, price: etherScan.price, supply: etherScan.supply, addresses: etherScan.addresses});
+        const swaps: number = await getConnection("peet").getRepository(SwapRequestEntity)
+        .count()
+
+        return result.send({result: true, price: etherScan.price, supply: etherScan.supply, addresses: etherScan.addresses, swaps: swaps});
     } catch(e) {
         console.error(e)
     }

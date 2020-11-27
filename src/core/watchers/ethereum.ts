@@ -54,6 +54,23 @@ export class EthereumWatcher
         }, 10000);
     }
 
+    async updateRequestState(addr: string, tx: string, amount: number) {
+        const request = await getConnection("peet").getRepository(SwapRequestEntity)
+        .createQueryBuilder()
+        .where('from_addr = :from_addr')
+        .andWhere('expire_at > :now')
+        .andWhere('ended = 0')
+        .orderBy("idswap_request", "DESC")
+        .setParameters({now: moment(new Date()).toDate(), from_addr: addr})
+        .getOne()
+        if (request !== undefined) {
+            await getConnection("peet").getRepository(SwapRequestEntity).update({idswapRequest: request.idswapRequest}, {
+                txId: tx,
+                receivedAmount: amount.toFixed(8)
+            })
+        }
+    }
+
     async watchTransfers()
     {
         const abi = JSON.parse(fs.readFileSync('./abi/pte_eth.json', 'utf-8'));
@@ -63,8 +80,8 @@ export class EthereumWatcher
             if (event.returnValues.to === config.EthereumAddr) {
                 const value = event.returnValues.value / (10 ** 18)
                 log.info(`(ETH) Received ${value} PTE from: ${event.returnValues.from}`)
+                this.updateRequestState(event.returnValues.from, event.transactionHash, value)
                 this.waitConfirmationsLoop(event)
-                
             }
         })
     }
@@ -84,11 +101,6 @@ export class EthereumWatcher
         if (request === undefined) {
             return log.error(`Cant find waiting request for received ETH from: ${tx.returnValues.from}`)
         }
-
-        await getConnection("peet").getRepository(SwapRequestEntity).update({idswapRequest: request.idswapRequest}, {
-            txId: tx.transactionHash,
-            receivedAmount: amountReceived.toFixed(8)
-        })
 
         await Core.swapPTE(request, Number(amountReceived), tx.transactionHash)
     }
