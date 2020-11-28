@@ -75,8 +75,20 @@ export class EthereumWatcher
     {
         const abi = JSON.parse(fs.readFileSync('./abi/pte_eth.json', 'utf-8'));
         const contract = new this.web3.eth.Contract(abi, config.EthereumAsset);
+        const contractWeth = new this.web3.eth.Contract(abi, "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");
+
+        contractWeth.events.Transfer({}, async (error, _) => {
+            if (error) {
+                console.error(error) 
+                return process.exit(-1)
+            }
+        })
+
         contract.events.Transfer({}, async (error, event) => {
-            if (error) { console.error(error)}
+            if (error) {
+                console.error(error) 
+                return process.exit(-1)
+            }
             if (event.returnValues.to === config.EthereumAddr) {
                 const value = event.returnValues.value / (10 ** 18)
                 log.info(`(ETH) Received ${value} PTE from: ${event.returnValues.from}`)
