@@ -31,7 +31,7 @@ class EtherScanInfos
                             const matches = supply.match(/(\d+(?:[\.,](?![\.,])\d+)*)/)
                             this.supply = Number(matches ? matches[0].replace(/,/g,'') : 0)
                             
-                        } else if(x.includes("addresses</div>")) {
+                        } else if(x.includes("addresses")) {
                             const matches = x.match(/^[0-9]*/)
                             this.addresses = Number(matches ? matches[0] : 0)
                         }
