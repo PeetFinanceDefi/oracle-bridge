@@ -37,4 +37,9 @@ router.get('/medium-rss', async (_: any, result: any) => {
     return result.send(rss)
 });
 
+router.get('/chain/supply', async (_: any, result: any) => {
+    result.type('text/plain');
+    result.send("38765.5") 
+})
+
 module.exports = router;

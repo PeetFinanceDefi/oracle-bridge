@@ -31,6 +31,7 @@ class HttpServer {
     {
         this.app.use('/front', require('./v1/peetFront'))
         this.app.use('/swap', require('./v1/swap'))
+        this.app.use('/pool', require('./v1/pool'))
     }
 }
 
