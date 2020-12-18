@@ -21,31 +21,35 @@ class PoolStakingHistory
 
     async refreshHistoryLivePools()
     {
-        const livePoolsRaw = await this.contract.methods.fetchLivePools().call()
-        const livePoolsPlusRaw = await this.contract.methods.fetchLivePoolsPlus().call()
-        const pools = []
+        try {
+            const livePoolsRaw = await this.contract.methods.fetchLivePools().call()
+            const livePoolsPlusRaw = await this.contract.methods.fetchLivePoolsPlus().call()
+            const pools = []
 
-        for (var i = 0; i < livePoolsRaw[0].length; i++) {
-            pools.push({
-                indice: livePoolsRaw[0][i],
-                amount: Number(livePoolsPlusRaw[1][i]) / (10 ** 18)
-            })
-        }
+            for (var i = 0; i < livePoolsRaw[0].length; i++) {
+                pools.push({
+                    indice: livePoolsRaw[0][i],
+                    amount: Number(livePoolsPlusRaw[1][i]) / (10 ** 18)
+                })
+            }
 
-        pools.forEach(async (x) => {
-            const saved = await getConnection("peet").getRepository(PoolHistory).findOne({hash: x.indice, pooledAmount: x.amount})
-            if (saved !== undefined) { return }
-            await getConnection("peet").getRepository(PoolHistory).insert({
-                hash: x.indice,
-                pooledAmount: x.amount
+            pools.forEach(async (x) => {
+                const saved = await getConnection("peet").getRepository(PoolHistory).findOne({hash: x.indice, pooledAmount: x.amount})
+                if (saved !== undefined) { return }
+                await getConnection("peet").getRepository(PoolHistory).insert({
+                    hash: x.indice,
+                    pooledAmount: x.amount
+                })
             })
-        })
+        } catch (e) { console.error(e) }
     }
 
     async loopRequest()
     {
         setInterval(async () => {
+            try {
             await this.refreshHistoryLivePools()
+            } catch (e) { }
         }, (1 * 1000) * 60) // 1mins
     }
 }
