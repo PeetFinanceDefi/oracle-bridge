@@ -21,6 +21,10 @@ class CoinsPriceCache
     constructor()
     {
         this.web3 = new Web3(config.EthereumNode);
+        this.prices.push({
+            coin:"USDT",
+            price: 1
+        })
         this.loopRequest()
     }
 
@@ -83,7 +87,7 @@ class CoinsPriceCache
             try {
                 await this.refreshPrices()
             } catch (e) { }
-        }, (1 * 1000) * 5) // 1mins
+        }, (2 * 1000) * 60)// 1mins
     }
 }
 
