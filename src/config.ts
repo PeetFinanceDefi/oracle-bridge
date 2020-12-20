@@ -62,6 +62,12 @@ export class Config {
 
 	@ENV('NEO_MIN_CONFS', true)
 	public NeoMinConfs: number
+
+	@ENV('ETH_USDT_CONTRACT', true)
+	public EthUsdtContract: string
+
+	@ENV('ETH_WETH_CONTRACT', true)
+	public EthWethContract: string
 }
 
 const loadConfigFromEnv = (): Config => {

@@ -4,6 +4,7 @@ import { factory } from "./../../logger"
 import { etherScan } from "../../worker/etherScanInfos";
 import { getConnection } from "typeorm";
 import { SwapRequestEntity } from "../../database/entities/peet/SwapRequest";
+import { coinPriceCache } from "../../worker/coinsPriceCache";
 const log = factory.getLogger("oracle");
 const request = require('request');
 
@@ -17,6 +18,14 @@ router.get('/token', async (_: any, result: any) => {
         .count()
 
         return result.send({result: true, price: etherScan.price, supply: etherScan.supply, addresses: etherScan.addresses, swaps: swaps});
+    } catch(e) {
+        console.error(e)
+    }
+});
+
+router.get('/usdt-worths', async (_: any, result: any) => {
+    try {
+        return result.send({result: true, datas: coinPriceCache.prices});
     } catch(e) {
         console.error(e)
     }
