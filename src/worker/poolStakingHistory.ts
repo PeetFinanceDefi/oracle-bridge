@@ -34,11 +34,11 @@ class PoolStakingHistory
             }
 
             pools.forEach(async (x) => {
-                const saved = await getConnection("peet").getRepository(PoolHistory).findOne({hash: x.indice, pooledAmount: x.amount})
+                const saved = await getConnection("peet").getRepository(PoolHistory).findOne({hash: x.indice, pooledAmount: x.amount.toFixed(8)})
                 if (saved !== undefined) { return }
                 await getConnection("peet").getRepository(PoolHistory).insert({
                     hash: x.indice,
-                    pooledAmount: x.amount
+                    pooledAmount: x.amount.toFixed(8)
                 })
             })
         } catch (e) { console.error(e) }
